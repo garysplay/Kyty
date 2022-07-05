@@ -1,4 +1,29 @@
-== RuntimeLinker::LoadProgram(name)
+== Loadind the program
+*Tldr*: All elf files and libaries are loaded, their exported/imported symbols are mapped and relocated. run_entry() and game_main_loop() run concurrently
+
+
+Rough overview about the loading and symbol linking of the program/game. Ends with the jump into the program.
+
+.Kyty Lua functions (for the init process). Registerd by kyty_reg() in Kyty.cpp
+[plantuml, kyty-functions, png]
+....
+class kyty{
+    kyty_init()
+    kyty_load_cfg()
+    kyty_load_elf()
+    kyty_save_main_elf()
+    kyty_load_symbols()
+    kyty_load_param_sfo()
+    kyty_dbg_dump()
+    kyty_execute()
+    kyty_mount()
+    kyty_shader_disable()
+    kyty_shader_printf()
+    kyty_run_tests()
+}
+....
+
+=== kyty_load_elf_func()
 
 .Class: RuntimeLinker
 [plantuml, class-diagram, png]
@@ -11,20 +36,30 @@ class VirtualMemory{
 class Program{
     RuntimeLinker* rt
     uint64_t base_vaddr
+    SymbolDatabase* export_symbols
+    SymbolDatabase* import_symbols
 }
 
-class RuntimeLinker{
-    ___
+class RuntimeLinker  << (S,#FF7700) Singleton >>{
+    SymbolDatabase m_symbols
     Program* LoadProgram(name)
 }
 
+class Kyty{
+    kyty_load_elf_func()
+}
+
+class SymbolDatabase
+
 RuntimeLinker "1" -o Program
+Program *-- "2" SymbolDatabase
 Program *-- VirtualMemory : @ g_desired_base_addr
+Kyty -> RuntimeLinker
 ....
 
-The selected files (here) eboot.bin, libc.prx and libSceFios2.prx are loaded to g_desired_base_addr by calling _RuntimeLinker::LoadProgram()_. 
+The selected files (here) eboot.bin, libc.prx and libSceFios2.prx are loaded to g_desired_base_addr by calling _RuntimeLinker::LoadProgram()_.
 
-hint: Loading/Parsing the program initially is done by "Emulator/Loader/elf64"
+Hint: Loading/Parsing the program initially is done by "Emulator/Loader/elf64"
 
 _"g_desired_base_addr += CODE_BASE_INCR * (1 + alloc_size / CODE_BASE_INCR)"_
 
@@ -53,8 +88,66 @@ todo: tls header patch?
 |0x000000093005c000 *data rw*
 |===
 
+After loading a file to memory, its symbol database is created for the exported/imported functions  by calling _CreateSymbolDatabase(Program)_.
 
 
+Next step is to load libraries which provide the necessary symbols.
+
+=== kyty_load_symbols()
+
+Available libs are hardcoded currently. See emulator/src/Libs/Libs.cpp.
+Every library provides an _Init*-function_ (e.g. InitVideoOut_1) and is directly called by _kyty_load_symbols()_. It adds its functions to the SymbolDatabase RuntimeLinker::m_symbols
 
 
+=> Every program has its two own SymbolDatabase for export/import and RuntimeLinker holds all symbols from the provided libraries.
 
+=== kyty_execute()
+
+Runs RuntimeLinker::execute() on a newly created thread ("MainThread").
+
+The process-thread calls WindowRun(), which initializes the window and vulkan first and then jumps to the game_main_loop(), afterwards.
+
+Both are now running concurrently.
+
+
+==== RuntimeLinker::execute()
+
+Initializes the thread by calling PthreadAttrInit():
+
+[small]
+----
+[9][00:00:00.114] libkernel::libkernel::PthreadAttrInit()
+[9][00:00:00.114] libkernel::libkernel::PthreadAttrSetinheritsched()
+[9][00:00:00.114] libkernel::libkernel::PthreadAttrSetschedparam()
+[9][00:00:00.114] libkernel::libkernel::PthreadAttrSetschedpolicy()
+[9][00:00:00.114] libkernel::libkernel::PthreadAttrSetdetachstate()
+[9][00:00:00.114] libkernel::libkernel::PthreadAttrGetaffinity()
+[9][00:00:00.114] libkernel::libkernel::PthreadAttrGetdetachstate()
+[9][00:00:00.115] libkernel::libkernel::PthreadAttrGetguardsize()
+[9][00:00:00.115] libkernel::libkernel::PthreadAttrGetinheritsched()
+[9][00:00:00.115] libkernel::libkernel::PthreadAttrGetschedparam()
+[9][00:00:00.115] libkernel::libkernel::PthreadAttrGetschedpolicy()
+[9][00:00:00.115] libkernel::libkernel::PthreadAttrGetstackaddr()
+[9][00:00:00.115] libkernel::libkernel::PthreadAttrGetstacksize()
+	cpu_mask       = 0x7f
+	detach_state   = 0
+	guard_size     = 4096
+	inherit_sched  = 4
+	sched_priority = 700
+	policy         = 1
+	stack_addr     = 0x0000000000000000
+	stack_size    = 0
+----
+Next, calls RelocateAll():
+[small]
+----
+--- Relocate program: */eboot.bin ---
+--- Relocate program: */sce_module/libc.prx ---
+--- Relocate program: */sce_module/libSceFios2.prx ---
+----
+
+In short, it sets the symbols from the symbolDatabases.
+
+Before running the program, the modules have to be initialized- StartAllModules(). It calls the modules init-function.
+
+The main-program is now ready to be called- run_entry()
