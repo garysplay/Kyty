@@ -1,0 +1,60 @@
+== RuntimeLinker::LoadProgram(name)
+
+.Class: RuntimeLinker
+[plantuml, class-diagram, png]
+....
+
+class VirtualMemory{
+
+}
+
+class Program{
+    RuntimeLinker* rt
+    uint64_t base_vaddr
+}
+
+class RuntimeLinker{
+    ___
+    Program* LoadProgram(name)
+}
+
+RuntimeLinker "1" -o Program
+Program *-- VirtualMemory : @ g_desired_base_addr
+....
+
+The selected files (here) eboot.bin, libc.prx and libSceFios2.prx are loaded to g_desired_base_addr by calling _RuntimeLinker::LoadProgram()_. 
+
+hint: Loading/Parsing the program initially is done by "Emulator/Loader/elf64"
+
+_"g_desired_base_addr += CODE_BASE_INCR * (1 + alloc_size / CODE_BASE_INCR)"_
+
+The segments: code, data (read only) and data (read &write) are read and loaded to the programs virtualMemory afterwards.
+
+todo: tls header patch?
+
+.LoadProgram memory layout 
+[cols="1,1"]
+|===
+|file| address
+
+|eboot.bin
+|0x0000000900000000 *code*|
+|0x0000000900f60000 *data ro*|
+|0x0000000901010000 *data rw*
+
+|libc.prx
+|0x0000000920000000 *code*|
+|0x00000009200b8000 *data ro*|
+|0x00000009200c0000 *data rw*
+
+|libSceFios2.prx
+|0x0000000930000000 *code*|
+|0x0000000930058000 *data ro*|
+|0x000000093005c000 *data rw*
+|===
+
+
+
+
+
+

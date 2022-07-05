@@ -1,0 +1,13 @@
+= Kyty - PS4 & PS5 emulator                                     
+05.07.2022
+:sectnums:
+:toc:
+:toc-title: Contents                                                          
+:description: Example AsciiDoc document
+:keywords: AsciiDoc
+:imagesdir: ./img
+:kroki-fetch-diagram:
+
+Using Worms W.M.D as example
+
+include::chapters/loadingProgram.adoc[]
