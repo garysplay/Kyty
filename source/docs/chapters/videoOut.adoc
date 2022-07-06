@@ -1,0 +1,116 @@
+== LibVideoOut
+*Init*: Sets the resolution
+
+Roughly describing the requirements for LibVideoOut API
+
+
+
+.LibVideoOut exported Functions
+[plantuml, libVideoOut-functions, png]
+....
+class LibVideoOut{
+    VideoOutOpen()
+    VideoOutClose()
+    VideoOutGetResolutionStatus()
+    VideoOutSetBufferAttribute()
+    VideoOutSetFlipRate()
+    VideoOutAddFlipEvent()
+    VideoOutAddVblankEvent()
+    VideoOutRegisterBuffers()
+    VideoOutSubmitFlip()
+    VideoOutGetFlipStatus()
+    VideoOutGetVblankStatus()
+    VideoOutSetWindowModeMargins()
+}
+
+class VideoOutConfig{
+    Core::Mutex mutex
+	VideoOutResolutionStatus resolution
+	bool opened
+	int flip_rate
+	Vector<EventQueue::KernelEqueue> flip_eqs;
+	Vector<EventQueue::KernelEqueue> pre_vblank_eqs;
+	Vector<EventQueue::KernelEqueue> vblank_eqs;
+	VideoOutFlipStatus flip_status;
+	VideoOutVblankStatus pre_vblank_status;
+	VideoOutVblankStatus vblank_status;
+	VideoOutBufferInfo buffers[16];
+	VideoOutBufferSet buffers_sets[16];
+	int buffers_sets_num = 0;
+}
+class VideoOutResolutionStatus{
+    __Window Information__
+}
+
+LibVideoOut *- VideoOutConfig
+VideoOutConfig *- "1" VideoOutResolutionStatus
+....
+
+
+[small]
+----
+[9][00:00:01.085] VideoOut::VideoOut::VideoOutOpen()
+[9][00:00:01.085] VideoOut::VideoOut::VideoOutGetResolutionStatus()
+[9][00:00:01.155] VideoOut::VideoOut::VideoOutAddFlipEvent()
+[9][00:00:01.155] VideoOut::VideoOut::VideoOutSetBufferAttribute()
+[9][00:00:01.155] VideoOut::VideoOut::VideoOutRegisterBuffers()
+...
+[22][00:00:05.122] VideoOut::VideoOut::VideoOutSubmitFlip()
+...
+[22][00:00:05.208] VideoOut::VideoOut::VideoOutSubmitFlip()
+... // Repeats
+----
+
+=== VideoOutOpen()
+ Checks if a unused VideoOutConfig is available (1..VIDEO_OUT_NUM_MAX) and initializes it. Array Index "starts" with 1. Index is returned.
+
+=== VideoOutGetResolutionStatus(): RetByRef VideoOutResolutionStatus of the handle
+
+=== VideoOutAddFlipEvent(udata)
+ Creates KernelEqueueEvent and add it to the KernelEventQueue and VideoOutConfig::flip_eqs
+....
+Ident: VIDEO_OUT_EVENT_FLIP_Queue
+Queue: KERNEL_EVFILT_VIDEO_OUT
+   event.filter.data = videoOutConfig 
+   event.event.udata = udata
+
+callbacks:
+   flip_event_delete_func
+   flip_event_reset_func
+   flip_event_trigger_func
+....
+
+=== VideoOutSetBufferAttribute()
+ Only wants the VideoOutBufferAttribute. Which is filled only with the information provided as values.
+-> No Internal changes
+
+=== VideoOutRegisterBuffers()
+[small]
+----
+start_index = 0
+buffer_num = 2
+pixel_format   = 0x80000000
+tiling_mode    = 0
+aspect_ratio   = 0
+width          = 1920
+height         = 1080
+pitch_in_pixel = 1920
+option = 0
+----
+
+Calls Graphics::WindowWaitForGraphicInitialized()  and Graphics::GraphicsRenderCreateContext().
+
+----
+for start_index < buffer_num
+    Graphics::GpuMemoryCreateObject()
+----
+
+-> Creates the VideoOutBuffers at the provided *addresses (Sysstem Memory)* and stores them in VideoOutConfig::buffers.
+
+buffer := System Memory Address, buffer_vulkan := GpuMemoryCreateObject
+
+
+=== VideoOutSubmitFlip()
+g_video_out_context->GetFlipQueue().Submit(ctx, index, flip_arg)
+
+-> Draws the vulkan_buffer to videoOut and increments the frame counter.

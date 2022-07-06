@@ -11,3 +11,4 @@
 Using Worms W.M.D as example
 
 include::chapters/loadingProgram.adoc[]
+include::chapters/videoOut.adoc[]
