@@ -6,9 +6,11 @@
 :description: Example AsciiDoc document
 :keywords: AsciiDoc
 :imagesdir: ./img
-:kroki-fetch-diagram:
 
 Using Worms W.M.D as example
 
 include::chapters/loadingProgram.adoc[]
+
 include::chapters/videoOut.adoc[]
+
+include::chapters/graphics.adoc[]

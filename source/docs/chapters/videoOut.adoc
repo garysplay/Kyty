@@ -3,49 +3,19 @@
 
 Roughly describing the requirements for LibVideoOut API
 
-
-
 .LibVideoOut exported Functions
 [plantuml, libVideoOut-functions, png]
-....
-class LibVideoOut{
-    VideoOutOpen()
-    VideoOutClose()
-    VideoOutGetResolutionStatus()
-    VideoOutSetBufferAttribute()
-    VideoOutSetFlipRate()
-    VideoOutAddFlipEvent()
-    VideoOutAddVblankEvent()
-    VideoOutRegisterBuffers()
-    VideoOutSubmitFlip()
-    VideoOutGetFlipStatus()
-    VideoOutGetVblankStatus()
-    VideoOutSetWindowModeMargins()
-}
+----
+include::../uml/Class_LibVideoOut_api.puml[]
+----
 
-class VideoOutConfig{
-    Core::Mutex mutex
-	VideoOutResolutionStatus resolution
-	bool opened
-	int flip_rate
-	Vector<EventQueue::KernelEqueue> flip_eqs;
-	Vector<EventQueue::KernelEqueue> pre_vblank_eqs;
-	Vector<EventQueue::KernelEqueue> vblank_eqs;
-	VideoOutFlipStatus flip_status;
-	VideoOutVblankStatus pre_vblank_status;
-	VideoOutVblankStatus vblank_status;
-	VideoOutBufferInfo buffers[16];
-	VideoOutBufferSet buffers_sets[16];
-	int buffers_sets_num = 0;
-}
-class VideoOutResolutionStatus{
-    __Window Information__
-}
+[plantuml, libVideoOut-Seq, png]
+----
+User -> VideoOutContext **: VideoOutInit()
+User-> VideoOutContext : VideoOutOpen()
 
-LibVideoOut *- VideoOutConfig
-VideoOutConfig *- "1" VideoOutResolutionStatus
-....
-
+User -> VideoOutContext !!: VideoOutClose()
+----
 
 [small]
 ----

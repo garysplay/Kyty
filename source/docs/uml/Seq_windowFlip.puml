@@ -1,0 +1,62 @@
+@startuml
+participant User
+
+box "Waits and draws for framebuffer only" #LightBlue
+
+activate game_main_loop
+participant VideoOut
+participant Graphics
+end box
+activate GraphicsRing
+note over GraphicsRing: ThreadBatchRun\n wait on Submit  (GetCmdBatch)
+participant CommandProcessor
+activate Labels
+
+game_main_loop -> VideoOut: VideoOutBeginVblank
+game_main_loop -> VideoOut: VideoOutFlipWindow
+
+activate VideoOut
+VideoOut -> VideoOut ++: FlipQueue::Flip
+
+User -> Graphics ++: Build CommandBatch
+Graphics --> User --
+
+User -> Graphics ++: GraphicsSubmitDone
+Graphics --> User: GPU is Ready (idle)
+deactivate Graphics
+
+User -> Graphics ++: GraphicsSubmitCommandBuffers
+Graphics -> Graphics ++: GraphicsRunSubmit
+Graphics -> GraphicsRing ++: Submit
+GraphicsRing --> Graphics --: Added to List
+Graphics --> User --
+
+
+GraphicsRing -> CommandProcessor ++: run (const_buffer (m_job1) \n& draw_buffer (m_job2))
+... Rendering ...
+
+CommandProcessor -> CommandProcessor ++: cp_op_event_write_eop
+
+CommandProcessor -> Labels ++: LabelSet
+Labels --> CommandProcessor --
+
+CommandProcessor --> GraphicsRing --
+GraphicsRing -> CommandProcessor: (Command)BufferFlush
+
+Labels -> Labels ++: Wait for fence& event\nCall callback1 &2
+Labels ->User: (Triggers Flip)
+deactivate Labels
+
+User -> VideoOut ++: VideoOutSubmitFlip
+deactivate VideoOut
+VideoOut -> Graphics ++: WindowDrawBuffer
+Graphics --> VideoOut --
+VideoOut ->? --: Kernel::VIDEO_OUT_EVENT_FLIP
+
+VideoOut --> game_main_loop --
+
+game_main_loop -> VideoOut: VideoOutEndVblank
+
+deactivate game_main_loop
+deactivate GraphicsRing
+@enduml

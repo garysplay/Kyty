@@ -6,7 +6,7 @@ Rough overview about the loading and symbol linking of the program/game. Ends wi
 
 .Kyty Lua functions (for the init process). Registerd by kyty_reg() in Kyty.cpp
 [plantuml, kyty-functions, png]
-....
+----
 class kyty{
     kyty_init()
     kyty_load_cfg()
@@ -21,14 +21,13 @@ class kyty{
     kyty_shader_printf()
     kyty_run_tests()
 }
-....
+----
 
 === kyty_load_elf_func()
 
 .Class: RuntimeLinker
 [plantuml, class-diagram, png]
-....
-
+----
 class VirtualMemory{
 
 }
@@ -55,7 +54,7 @@ RuntimeLinker "1" -o Program
 Program *-- "2" SymbolDatabase
 Program *-- VirtualMemory : @ g_desired_base_addr
 Kyty -> RuntimeLinker
-....
+----
 
 The selected files (here) eboot.bin, libc.prx and libSceFios2.prx are loaded to g_desired_base_addr by calling _RuntimeLinker::LoadProgram()_.
 

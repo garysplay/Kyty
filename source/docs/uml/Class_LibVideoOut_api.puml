@@ -1,0 +1,67 @@
+@startuml
+class LibVideoOut{
+    VideoOutOpen()
+    VideoOutClose()
+    VideoOutGetResolutionStatus()
+    VideoOutSetBufferAttribute()
+    VideoOutSetFlipRate()
+    VideoOutAddFlipEvent()
+    VideoOutAddVblankEvent()
+    VideoOutRegisterBuffers()
+    VideoOutSubmitFlip()
+    VideoOutGetFlipStatus()
+    VideoOutGetVblankStatus()
+    VideoOutSetWindowModeMargins()
+}
+
+class VideoOutConfig << (D,orchid) >>{
+	VideoOutResolutionStatus resolution
+	bool opened
+	int flip_rate
+	Vector<EventQueue::KernelEqueue> flip_eqs;
+	Vector<EventQueue::KernelEqueue> pre_vblank_eqs;
+	Vector<EventQueue::KernelEqueue> vblank_eqs;
+	VideoOutFlipStatus flip_status;
+	VideoOutVblankStatus pre_vblank_status;
+	VideoOutVblankStatus vblank_status;
+	VideoOutBufferInfo buffers[16];
+	VideoOutBufferSet buffers_sets[16];
+	int buffers_sets_num = 0;
+}
+
+class VideoOutContext << (S,#FF7700) Singleton >>{
+    VIDEO_OUT_NUM_MAX
+
+    void Init(WindowSize)
+..VideoOutConfig..
+    Handle Open()
+    void Close()
+    VideoOutConfig Get()
+    VideoOutConfig[] m_video_out_ctx
+..Graphics::GraphicContext..
+    GraphicContext GetGraphicCtx()
+    GraphicContext m_graphic_ctx
+..FlipQueue..
+    FlipQueue GetFlipQueue()
+    FlipQueue m_flip_queue
+..
+    VideoOutBufferImageInfo FindImage(AddrBuffer)
+    void VblankBegin()
+    void VblankEnd()
+}
+
+class FlipQueue{
+    bool Submit(Request,VideoOutConfig)
+    bool Flip()
+    void GetFlipStatus()
+    void Wait()
+    Requests[] m_requests
+}
+VideoOutContext *-- "1" FlipQueue
+VideoOutContext *- "n" VideoOutConfig
+
+FlipQueue o- VideoOutConfig
+
+LibVideoOut -> VideoOutContext: Inits/Creates
+
+@enduml

@@ -1,0 +1,113 @@
+== LibGraphics
+
+.LibGraphics exported Functions
+[plantuml, libGraphics-functions, png]
+----
+include::../uml/Class_LibGraphics_api.puml[]
+----
+
+
+User (Program) collects commands into one cmd buffer and calls GraphicsSubmitCommandBuffers() afterwards. 
+[small]
+----
+Functions info put into the cmd buffer:
+    User -> Graphics: GraphicsDrawInitDefaultHardwareState200
+    User -> Graphics: GraphicsSetVsShader
+    User -> Graphics: GraphicsSetPsShader
+    User -> Graphics: GraphicsUpdateVsShader
+...
+----
+
+
+cmd consists of:
+[small]
+----
+(uint32_t) cmd[0] = KYTY_PM4(size, Pm4::IT_NOP, Pm4::R_VS_UPDATE); // Always (Completly custom?)
+(uint32_t) cmd[1..n] // Dependent on command
+----
+
+.Sequence-Diagram Graphics-Window flip
+[plantuml, libGraphics-Seq, png]
+----
+include::../uml/Seq_windowFlip.puml[]
+----
+
+
+GraphicsSubmitCommandBuffers() -> GraphicsRing::ThreadBatchRun -> CommandProcessor::Run() runs async for draw_buffer and const_buffer. _(const_buffer is mostly idle, draw_buffer does all the work)_
+
+*g_cp_op_func and g_hw_ctx_func*, defined by graphics_init_jmp_tables(), forward these commands.
+
+.Currently defined g_cp_op_func
+[small]
+----
+[Pm4::IT_NOP]                     :=cp_op_nop;
+    Pm4::R_ZERO
+    Pm4::R_VS: := hw_ctx_set_vs_shader()
+    Pm4::R_PS: := hw_ctx_set_ps_shader()
+    Pm4::R_CS: := hw_ctx_set_cs_shader()
+    Pm4::R_DRAW_INDEX: := cp_op_draw_index()
+    Pm4::R_DRAW_INDEX_AUTO: := cp_op_draw_index_auto()
+    Pm4::R_DISPATCH_DIRECT: := cp_op_dispatch_direct()
+    Pm4::R_DISPATCH_RESET: := cp_op_dispatch_reset()
+    Pm4::R_DISPATCH_WAIT_MEM: := cp_op_wait_on_address()
+    Pm4::R_DRAW_RESET: := cp_op_draw_reset()
+    Pm4::R_WAIT_FLIP_DONE: := cp_op_wait_flip_done()
+    Pm4::R_PUSH_MARKER: := cp_op_push_marker()
+    Pm4::R_POP_MARKER: := cp_op_pop_marker()
+    Pm4::R_VS_EMBEDDED: := hw_ctx_set_vs_embedded()
+    Pm4::R_PS_EMBEDDED: := hw_ctx_set_ps_embedded()
+    Pm4::R_VS_UPDATE: := hw_ctx_update_vs_shader()
+    Pm4::R_PS_UPDATE: := hw_ctx_update_ps_shader()
+[Pm4::IT_DRAW_INDEX_2]            :=cp_op_draw_index;
+[Pm4::IT_INDEX_TYPE]              :=cp_op_index_type;
+[Pm4::IT_NUM_INSTANCES]           :=cp_op_num_instances;
+[Pm4::IT_DRAW_INDEX_AUTO]         :=cp_op_draw_index_auto;
+[Pm4::IT_WAIT_REG_MEM]            :=cp_op_wait_reg_mem;
+[Pm4::IT_WRITE_DATA]              :=cp_op_write_data;
+[Pm4::IT_INDIRECT_BUFFER]         :=cp_op_indirect_buffer;
+[Pm4::IT_EVENT_WRITE]             :=cp_op_event_write;
+[Pm4::IT_EVENT_WRITE_EOP]         :=cp_op_event_write_eop;
+[Pm4::IT_EVENT_WRITE_EOS]         :=cp_op_event_write_eos;
+[Pm4::IT_RELEASE_MEM]             :=cp_op_release_mem;
+[Pm4::IT_DMA_DATA]                :=cp_op_dma_data;
+[Pm4::IT_ACQUIRE_MEM]             :=cp_op_acquire_mem;
+[Pm4::IT_SET_CONTEXT_REG]         :=cp_op_set_context_reg;  => forwards to *g_hw_ctx_func
+[Pm4::IT_SET_SH_REG]              :=cp_op_set_shader_reg;
+[Pm4::IT_SET_UCONFIG_REG]         :=cp_op_set_uconfig_reg;
+[Pm4::IT_WRITE_CONST_RAM]         :=cp_op_write_const_ram;
+[Pm4::IT_DUMP_CONST_RAM]          :=cp_op_dump_const_ram;
+[Pm4::IT_INCREMENT_CE_COUNTER]    :=cp_op_increment_ce_counter;
+[Pm4::IT_INCREMENT_DE_COUNTER]    :=cp_op_increment_de_counter;
+[Pm4::IT_WAIT_ON_CE_COUNTER]      :=cp_op_wait_on_ce_counter;
+[Pm4::IT_WAIT_ON_DE_COUNTER_DIFF] :=cp_op_wait_on_de_counter_diff;
+----
+
+.Currently defined g_hw_ctx_func
+[small]
+----
+[Pm4::DB_RENDER_CONTROL]                 = hw_ctx_set_render_control;
+[Pm4::DB_STENCIL_CLEAR]                  = hw_ctx_set_stencil_clear;
+[Pm4::DB_DEPTH_CLEAR]                    = hw_ctx_set_depth_clear;
+[Pm4::PA_SC_SCREEN_SCISSOR_TL]           = hw_ctx_set_screen_scissor;
+[Pm4::DB_Z_INFO]                         = hw_ctx_set_depth_render_target;
+[Pm4::DB_STENCIL_INFO]                   = hw_ctx_set_stencil_info;
+[0x08d]                                  = hw_ctx_hardware_screen_offset;
+[0x08e]                                  = hw_ctx_set_render_target_mask;
+[Pm4::PA_SC_GENERIC_SCISSOR_TL]          = hw_ctx_set_generic_scissor;
+[Pm4::CB_BLEND_RED]                      = hw_ctx_set_blend_color;
+[Pm4::DB_STENCIL_CONTROL]                = hw_ctx_set_stencil_control;
+[Pm4::DB_STENCILREFMASK]                 = hw_ctx_set_stencil_mask;
+[Pm4::SPI_PS_INPUT_CNTL_0]               = hw_ctx_set_ps_input;
+[Pm4::DB_DEPTH_CONTROL]                  = hw_ctx_set_depth_control;
+[Pm4::DB_EQAA]                           = hw_ctx_set_eqaa_control;
+[Pm4::CB_COLOR_CONTROL]                  = hw_ctx_set_color_control;
+[0x204]                                  = hw_ctx_set_clip_control;
+[Pm4::PA_SU_SC_MODE_CNTL]                = hw_ctx_set_mode_control;
+[0x206]                                  = hw_ctx_set_viewport_transform_control;
+[Pm4::PA_SU_LINE_CNTL]                   = hw_ctx_set_line_control;
+[Pm4::PA_SC_MODE_CNTL_0]                 = hw_ctx_set_scan_mode_control;
+[Pm4::PA_SC_AA_CONFIG]                   = hw_ctx_set_aa_config;
+[Pm4::PA_SC_AA_SAMPLE_LOCS_PIXEL_X0Y0_0] = hw_ctx_set_aa_sample_control;
+[Pm4::VGT_SHADER_STAGES_EN]              = hw_ctx_set_shader_stages;
+[0x2fa]                                  = hw_ctx_set_guard_bands;
+----
