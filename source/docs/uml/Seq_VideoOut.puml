@@ -1,0 +1,46 @@
+@startuml
+Participant User
+Participant VideoOutContext
+Participant FlipQueue
+Participant Graphics
+Participant GameMainLoop
+
+User -> VideoOutContext **: VideoOutInit()
+... Systeminit ...
+[->> Graphics ++: kyty_execute_func
+Graphics -> Graphics: Window- \nand VulkanCreate
+Graphics -> : graphic initialized
+Graphics -> GameMainLoop ++
+deactivate Graphics
+GameMainLoop -> GameMainLoop ++: game_main_loop
+...
+
+User -> VideoOutContext : VideoOutOpen()
+User -> VideoOutContext : VideoOutGetResolutionStatus()
+User -> VideoOutContext : VideoOutAddFlipEvent()\n   video_out_event_flip\n   EventQueue::kernel_evfilt_video_out
+User -> VideoOutContext : VideoOutSetBufferAttribute()
+User -> VideoOutContext : VideoOutRegisterBuffers()\n Ram
+
+loop
+GameMainLoop -> GameMainLoop: SDL - poll_event
+GameMainLoop -> GameMainLoop: game_process_event
+GameMainLoop -> FlipQueue ++: Flip
+...
+User -> VideoOutContext ++: VideoOutSubmitFlip()
+VideoOutContext ->> FlipQueue: Submit()
+VideoOutContext -> User --
+
+FlipQueue -> FlipQueue ++: Flip
+FlipQueue -> Graphics ++: WindowDrawBuffer()
+... Copy Buffer to GPU ...
+Graphics -> FlipQueue --
+
+FlipQueue ->] : EventQueue::KernelTriggerEvent()\n   video_out_event_flip\n   EventQueue::kernel_evfilt_video_out
+FlipQueue --> GameMainLoop --
+end
+
+...
+ -> GameMainLoop !!: game_event_quit / event_terminate
+ deactivate GameMainLoop
+User -> VideoOutContext !!: VideoOutClose()
+@enduml

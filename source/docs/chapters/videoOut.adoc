@@ -1,43 +1,32 @@
 == LibVideoOut
 *Init*: Sets the resolution
-
 Roughly describing the requirements for LibVideoOut API
 
-.LibVideoOut exported Functions
+.LibVideoOut rough structure
 [plantuml, libVideoOut-functions, png]
 ----
 include::../uml/Class_LibVideoOut_api.puml[]
 ----
 
+.LibVideoOut Sequence-Diagram
 [plantuml, libVideoOut-Seq, png]
 ----
-User -> VideoOutContext **: VideoOutInit()
-User-> VideoOutContext : VideoOutOpen()
-
-User -> VideoOutContext !!: VideoOutClose()
+include::../uml/Seq_VideoOut.puml[]
 ----
 
-[small]
-----
-[9][00:00:01.085] VideoOut::VideoOut::VideoOutOpen()
-[9][00:00:01.085] VideoOut::VideoOut::VideoOutGetResolutionStatus()
-[9][00:00:01.155] VideoOut::VideoOut::VideoOutAddFlipEvent()
-[9][00:00:01.155] VideoOut::VideoOut::VideoOutSetBufferAttribute()
-[9][00:00:01.155] VideoOut::VideoOut::VideoOutRegisterBuffers()
-...
-[22][00:00:05.122] VideoOut::VideoOut::VideoOutSubmitFlip()
-...
-[22][00:00:05.208] VideoOut::VideoOut::VideoOutSubmitFlip()
-... // Repeats
-----
+
+[TIP] 
+SDL Event and Flip can run concurrently. FlipQueue could run in a loop and be controled by GameMainLoop
+
 
 === VideoOutOpen()
- Checks if a unused VideoOutConfig is available (1..VIDEO_OUT_NUM_MAX) and initializes it. Array Index "starts" with 1. Index is returned.
+Checks if a unused VideoOutConfig is available (1..VIDEO_OUT_NUM_MAX) and initializes it.+ 
+Array Index "starts" with 1. Index is returned.
 
 === VideoOutGetResolutionStatus(): RetByRef VideoOutResolutionStatus of the handle
 
 === VideoOutAddFlipEvent(udata)
- Creates KernelEqueueEvent and add it to the KernelEventQueue and VideoOutConfig::flip_eqs
+ Creates KernelEqueueEvent, adds it to the KernelEventQueue and VideoOutConfig::flip_eqs
 ....
 Ident: VIDEO_OUT_EVENT_FLIP_Queue
 Queue: KERNEL_EVFILT_VIDEO_OUT
@@ -75,8 +64,8 @@ for start_index < buffer_num
     Graphics::GpuMemoryCreateObject()
 ----
 
--> Creates the VideoOutBuffers at the provided *addresses (Sysstem Memory)* and stores them in VideoOutConfig::buffers.
-
+[NOTE] 
+Creates the VideoOutBuffers at the provided *addresses (Sysstem Memory)* and stores them in VideoOutConfig::buffers. +
 buffer := System Memory Address, buffer_vulkan := GpuMemoryCreateObject
 
 

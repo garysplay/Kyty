@@ -18,20 +18,18 @@ class VideoOutConfig << (D,orchid) >>{
 	VideoOutResolutionStatus resolution
 	bool opened
 	int flip_rate
-	Vector<EventQueue::KernelEqueue> flip_eqs;
-	Vector<EventQueue::KernelEqueue> pre_vblank_eqs;
-	Vector<EventQueue::KernelEqueue> vblank_eqs;
-	VideoOutFlipStatus flip_status;
-	VideoOutVblankStatus pre_vblank_status;
-	VideoOutVblankStatus vblank_status;
-	VideoOutBufferInfo buffers[16];
-	VideoOutBufferSet buffers_sets[16];
-	int buffers_sets_num = 0;
+	EventQueue::KernelEqueue[] flip_eqs
+	EventQueue::KernelEqueue[] pre_vblank_eqs
+	EventQueue::KernelEqueue[] vblank_eqs
+	VideoOutFlipStatus flip_status
+	VideoOutVblankStatus pre_vblank_status
+	VideoOutVblankStatus vblank_status
+	VideoOutBufferInfo buffers[16]
+	VideoOutBufferSet buffers_sets[16]
+	int buffers_sets_num = 0
 }
 
 class VideoOutContext << (S,#FF7700) Singleton >>{
-    VIDEO_OUT_NUM_MAX
-
     void Init(WindowSize)
 ..VideoOutConfig..
     Handle Open()
